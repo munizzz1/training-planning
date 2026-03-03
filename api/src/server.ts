@@ -1,5 +1,5 @@
 import "dotenv/config";
-import fastifySwaggerUI from "@fastify/swagger-ui";
+import ScalarApiReference from "@scalar/fastify-api-reference";
 import fastifySwagger from "@fastify/swagger";
 import fastifyCors from "@fastify/cors";
 import Fastify from "fastify";
@@ -7,6 +7,7 @@ import {
   jsonSchemaTransform,
   serializerCompiler,
   validatorCompiler,
+  type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 
 import { auth } from "./lib/auth.js";
@@ -29,8 +30,33 @@ await app.register(fastifyCors, {
   credentials: true,
 });
 
-await app.register(fastifySwaggerUI, {
+await app.register(ScalarApiReference, {
   routePrefix: "/docs",
+  configuration: {
+    sources: [
+      {
+        title: "Bootcamp Treinos API",
+        slug: "bootcamp-treinos-api",
+        url: "/swagger.json",
+      },
+      {
+        title: "Auth API",
+        slug: "auth-api",
+        url: "/api/auth/open-api/generate-schema",
+      },
+    ],
+  },
+});
+
+app.withTypeProvider<ZodTypeProvider>().route({
+  method: "GET",
+  url: "/swagger.json",
+  schema: {
+    hide: true,
+  },
+  handler: async () => {
+    return app.swagger();
+  },
 });
 
 app.route({
