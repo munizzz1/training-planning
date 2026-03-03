@@ -1,10 +1,8 @@
 import "dotenv/config";
 import ScalarApiReference from "@scalar/fastify-api-reference";
-import { fromNodeHeaders } from "better-auth/node";
 import fastifySwagger from "@fastify/swagger";
 import fastifyCors from "@fastify/cors";
 import Fastify from "fastify";
-import z from "zod";
 import {
   jsonSchemaTransform,
   serializerCompiler,
@@ -12,8 +10,7 @@ import {
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 
-import { CreateWorkoutPlan } from "./usecases/CreateWorkoutPlan.js";
-import { Weekday } from "./generated/prisma/enums.js";
+import { workoutPlanRoute } from "./routes/workout-plan.js";
 import { auth } from "./lib/auth.js";
 
 const app = Fastify({ logger: true });
@@ -28,6 +25,9 @@ await app.register(fastifySwagger, {
   },
   transform: jsonSchemaTransform,
 });
+
+//ROUTES
+await app.register(workoutPlanRoute, { prefix: "/workout-plans" });
 
 await app.register(fastifyCors, {
   origin: ["http://localhost:3000"],
@@ -49,65 +49,6 @@ await app.register(ScalarApiReference, {
         url: "/api/auth/open-api/generate-schema",
       },
     ],
-  },
-});
-
-app.withTypeProvider<ZodTypeProvider>().route({
-  method: "POST",
-  url: "/workout-plans",
-  schema: {
-    body: z.object({
-      name: z.string().trim().min(1),
-      workoutDays: z.array(
-        z.object({
-          name: z.string().trim().min(1),
-          weekDay: z.enum(Weekday),
-          isRest: z.boolean().default(false),
-          estimatedDurationInSeconds: z.number().int().min(1),
-          exercises: z.array(
-            z.object({
-              order: z.number().min(0),
-              name: z.string().trim().min(1),
-              sets: z.number().min(1),
-              reps: z.number().min(1),
-              restTimeInSeconds: z.number().min(0),
-            }),
-          ),
-        }),
-      ),
-    }),
-    response: {
-      201: z.object({
-        id: z.uuid(),
-      }),
-      400: z.object({
-        error: z.string(),
-        code: z.string(),
-      }),
-      401: z.object({
-        error: z.string(),
-        code: z.string(),
-      }),
-    },
-  },
-  handler: async (request, reply) => {
-    const session = await auth.api.getSession({
-      headers: fromNodeHeaders(request.headers),
-    });
-
-    if (!session) {
-      return reply.status(401).send({
-        error: "Unauthorized",
-        code: "UNAUTHORIZED",
-      });
-    }
-
-    const createWorkoutPlan = new CreateWorkoutPlan();
-    const result = await createWorkoutPlan.execute({
-      userId: session.user.id,
-      ...request.body,
-    });
-    reply.status(201).send({ id: result.id });
   },
 });
 
