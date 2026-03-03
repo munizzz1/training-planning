@@ -1,15 +1,22 @@
 import "dotenv/config";
 import Fastify from "fastify";
+import {
+  serializerCompiler,
+  validatorCompiler,
+} from "fastify-type-provider-zod";
 
-const fastify = Fastify({ logger: true });
+const app = Fastify({ logger: true });
 
-fastify.get("/", async (request, reply) => {
+app.setValidatorCompiler(validatorCompiler);
+app.setSerializerCompiler(serializerCompiler);
+
+app.get("/", async (request, reply) => {
   return { hello: "world" };
 });
 
 try {
-  await fastify.listen({ port: Number(process.env.PORT) ?? 3333 });
+  await app.listen({ port: Number(process.env.PORT) ?? 3333 });
 } catch (error) {
-  fastify.log.error(error);
+  app.log.error(error);
   process.exit(1);
 }
