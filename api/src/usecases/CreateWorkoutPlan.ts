@@ -1,6 +1,5 @@
 import type { Weekday } from "@/generated/prisma/enums.js";
 import { prisma } from "@/lib/db.js";
-import { tr } from "zod/v4/locales";
 
 interface InputDto {
   userId: string;
@@ -21,8 +20,17 @@ interface InputDto {
   }>;
 }
 
+interface OutputDto {
+  id: string;
+  name: string;
+  userId: string;
+  isActivate: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class CreateWorkoutPlan {
-  async execute(dto: InputDto) {
+  async execute(dto: InputDto): Promise<OutputDto> {
     const existingWorkoutPlan = await prisma.workoutPlan.findFirst({
       where: {
         userId: dto.userId,
@@ -49,7 +57,8 @@ export class CreateWorkoutPlan {
               weekDay: workoutDay.weekDay,
               isRest: workoutDay.isRest,
               estimatedDurationInSeconds: workoutDay.estimatedDurationInSeconds,
-              exercises: {
+              coverImageUrl: workoutDay.coverImageUrl,
+              workoutExercises: {
                 create: workoutDay.exercises.map((exercise) => ({
                   order: exercise.order,
                   name: exercise.name,
