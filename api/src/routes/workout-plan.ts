@@ -11,10 +11,13 @@ import {
   CompleteWorkoutSessionParamsSchema,
   CompleteWorkoutSessionBodySchema,
   CompleteWorkoutSessionResponseSchema,
+  GetWorkoutPlanParamsSchema,
+  GetWorkoutPlanResponseSchema,
 } from "@/schemas/index.js";
 import { CreateWorkoutPlan } from "@/usecases/CreateWorkoutPlan.js";
 import { StartWorkoutSession } from "@/usecases/StartWorkoutSession.js";
 import { CompleteWorkoutSession } from "@/usecases/CompleteWorkoutSession.js";
+import { GetWorkoutPlan } from "@/usecases/GetWorkoutPlan.js";
 import {
   WorkoutPlanNotActiveError,
   WorkoutSessionAlreadyStartedError,
@@ -164,6 +167,58 @@ export const workoutPlanRoute = async (app: FastifyInstance) => {
           workoutDayId: request.params.workoutDayId,
           workoutSessionId: request.params.workoutSessionId,
           completedAt: new Date(request.body.completedAt),
+        });
+        reply.status(200).send(result);
+      } catch (error) {
+        if (error instanceof UnauthorizedError) {
+          return reply.status(401).send({
+            error: error.message,
+            code: "UNAUTHORIZED",
+          });
+        }
+
+        if (error instanceof WorkoutDayNotFoundError) {
+          return reply.status(404).send({
+            error: error.message,
+            code: "NOT_FOUND",
+          });
+        }
+
+        throw error;
+      }
+    },
+  });
+
+  app.withTypeProvider<ZodTypeProvider>().route({
+    method: "GET",
+    url: "/:id",
+    schema: {
+      tags: ["Workout Plan"],
+      summary: "Get a specific workout plan",
+      params: GetWorkoutPlanParamsSchema,
+      response: {
+        200: GetWorkoutPlanResponseSchema,
+        401: ErrorSchema,
+        404: ErrorSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const session = await auth.api.getSession({
+        headers: fromNodeHeaders(request.headers),
+      });
+
+      if (!session) {
+        return reply.status(401).send({
+          error: "Unauthorized",
+          code: "UNAUTHORIZED",
+        });
+      }
+
+      try {
+        const getWorkoutPlan = new GetWorkoutPlan();
+        const result = await getWorkoutPlan.execute({
+          userId: session.user.id,
+          workoutPlanId: request.params.id,
         });
         reply.status(200).send(result);
       } catch (error) {
