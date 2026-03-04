@@ -19,18 +19,15 @@ The backend follows a **layered architecture** pattern:
   - Checks authentication via `better-auth`
   - Delegates business logic to use cases
   - Returns typed responses using `ZodTypeProvider`
-  
 - **Use Cases** (`src/usecases/`): Business logic classes (e.g., `CreateWorkoutPlan`). Pattern:
   - Single class per use case
   - `execute(dto)` method with structured input
   - May use Prisma transactions for multi-step operations
-  
 - **Schemas** (`src/schemas/`): Zod validation schemas for API requests/responses
 
 - **Library** (`src/lib/`):
   - `db.ts`: Prisma client instance
   - `auth.ts`: Better-auth configuration
-  
 - **Database**: PostgreSQL via Prisma ORM (v7.4.2)
   - Generated client in `src/generated/prisma/`
   - Do not manually edit generated files
@@ -38,14 +35,17 @@ The backend follows a **layered architecture** pattern:
 ## Build and Test
 
 **Development Server**:
+
 ```bash
 pnpm dev  # or npm run dev
 ```
+
 Runs `tsx watch` with `.env` file support on port 3333
 
 **Node Version**: Requires Node.js 24.x (see `engines` in `package.json`)
 
 **Database Operations**:
+
 - Schema changes: Edit `prisma/schema.prisma`
 - Run migrations: `pnpm prisma migrate dev --name <migration_name>`
 - Reset database: `pnpm prisma migrate reset`
@@ -99,6 +99,7 @@ export class CreateWorkoutPlan {
 ## Integration Points
 
 - **Authentication**: Via `better-auth` library. Always verify session before protected operations:
+
   ```typescript
   const session = await auth.api.getSession({
     headers: fromNodeHeaders(request.headers),
