@@ -8,9 +8,13 @@ import {
   WorkoutPlanSchema,
   StartWorkoutSessionParamsSchema,
   StartWorkoutSessionResponseSchema,
+  CompleteWorkoutSessionParamsSchema,
+  CompleteWorkoutSessionBodySchema,
+  CompleteWorkoutSessionResponseSchema,
 } from "@/schemas/index.js";
 import { CreateWorkoutPlan } from "@/usecases/CreateWorkoutPlan.js";
 import { StartWorkoutSession } from "@/usecases/StartWorkoutSession.js";
+import { CompleteWorkoutSession } from "@/usecases/CompleteWorkoutSession.js";
 import {
   WorkoutPlanNotActiveError,
   WorkoutSessionAlreadyStartedError,
@@ -106,6 +110,63 @@ export const workoutPlanRoute = async (app: FastifyInstance) => {
           });
         }
 
+        if (error instanceof UnauthorizedError) {
+          return reply.status(401).send({
+            error: error.message,
+            code: "UNAUTHORIZED",
+          });
+        }
+
+        if (error instanceof WorkoutDayNotFoundError) {
+          return reply.status(404).send({
+            error: error.message,
+            code: "NOT_FOUND",
+          });
+        }
+
+        throw error;
+      }
+    },
+  });
+
+  app.withTypeProvider<ZodTypeProvider>().route({
+    method: "PATCH",
+    url: "/:workoutPlanId/days/:workoutDayId/sessions/:workoutSessionId",
+    schema: {
+      tags: ["Workout Plan"],
+      summary: "Complete a workout session",
+      params: CompleteWorkoutSessionParamsSchema,
+      body: CompleteWorkoutSessionBodySchema,
+      response: {
+        200: CompleteWorkoutSessionResponseSchema,
+        400: ErrorSchema,
+        401: ErrorSchema,
+        404: ErrorSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const session = await auth.api.getSession({
+        headers: fromNodeHeaders(request.headers),
+      });
+
+      if (!session) {
+        return reply.status(401).send({
+          error: "Unauthorized",
+          code: "UNAUTHORIZED",
+        });
+      }
+
+      try {
+        const completeWorkoutSession = new CompleteWorkoutSession();
+        const result = await completeWorkoutSession.execute({
+          userId: session.user.id,
+          workoutPlanId: request.params.workoutPlanId,
+          workoutDayId: request.params.workoutDayId,
+          workoutSessionId: request.params.workoutSessionId,
+          completedAt: new Date(request.body.completedAt),
+        });
+        reply.status(200).send(result);
+      } catch (error) {
         if (error instanceof UnauthorizedError) {
           return reply.status(401).send({
             error: error.message,
