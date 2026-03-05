@@ -14,12 +14,16 @@ model User {
 
   workoutPlans WorkoutPlan[]
 
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now()) @db.Timestamptz()
-  updatedAt     DateTime  @updatedAt @db.Timestamptz()
-  sessions      Session[]
-  accounts      Account[]
+  emailVerified       Boolean   @default(false)
+  image               String?
+  weightInGrams       Int?
+  heightInCentimeters Int?
+  age                 Int?
+  bodyFatPercentage   Int? // 100 = 100%
+  createdAt           DateTime  @default(now()) @db.Timestamptz()
+  updatedAt           DateTime  @updatedAt @db.Timestamptz()
+  sessions            Session[]
+  accounts            Account[]
 
   @@map("users")
 }
