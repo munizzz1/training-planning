@@ -15,12 +15,15 @@ import {
   GetWorkoutPlanResponseSchema,
   GetWorkoutDayParamsSchema,
   GetWorkoutDayResponseSchema,
+  GetWorkoutPlansQuerySchema,
+  GetWorkoutPlansResponseSchema,
 } from "@/schemas/index.js";
 import { CreateWorkoutPlan } from "@/usecases/CreateWorkoutPlan.js";
 import { StartWorkoutSession } from "@/usecases/StartWorkoutSession.js";
 import { CompleteWorkoutSession } from "@/usecases/CompleteWorkoutSession.js";
 import { GetWorkoutPlan } from "@/usecases/GetWorkoutPlan.js";
 import { GetWorkoutDay } from "@/usecases/GetWorkoutDay.js";
+import { GetWorkoutPlans } from "@/usecases/GetWorkoutPlans.js";
 import {
   WorkoutPlanNotActiveError,
   WorkoutSessionAlreadyStartedError,
@@ -294,6 +297,39 @@ export const workoutPlanRoute = async (app: FastifyInstance) => {
 
         throw error;
       }
+    },
+  });
+
+  app.withTypeProvider<ZodTypeProvider>().route({
+    method: "GET",
+    url: "/",
+    schema: {
+      tags: ["Workout Plan"],
+      summary: "Get all workout plans for the authenticated user",
+      querystring: GetWorkoutPlansQuerySchema,
+      response: {
+        200: GetWorkoutPlansResponseSchema,
+        401: ErrorSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const session = await auth.api.getSession({
+        headers: fromNodeHeaders(request.headers),
+      });
+
+      if (!session) {
+        return reply.status(401).send({
+          error: "Unauthorized",
+          code: "UNAUTHORIZED",
+        });
+      }
+
+      const getWorkoutPlans = new GetWorkoutPlans();
+      const result = await getWorkoutPlans.execute({
+        userId: session.user.id,
+        active: request.query.active,
+      });
+      reply.status(200).send(result);
     },
   });
 };
