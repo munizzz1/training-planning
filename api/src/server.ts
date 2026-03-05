@@ -12,6 +12,7 @@ import {
 
 import { workoutPlanRoute } from "./routes/workout-plan.js";
 import { homeRoute } from "./routes/home.js";
+import { statsRoute } from "./routes/stats.js";
 import { auth } from "./lib/auth.js";
 
 const app = Fastify({ logger: true });
@@ -30,6 +31,7 @@ await app.register(fastifySwagger, {
 //ROUTES
 await app.register(workoutPlanRoute, { prefix: "/workout-plans" });
 await app.register(homeRoute, { prefix: "/home" });
+await app.register(statsRoute, { prefix: "/stats" });
 
 await app.register(fastifyCors, {
   origin: ["http://localhost:3000"],
