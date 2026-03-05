@@ -1,3 +1,4 @@
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance } from "fastify";
 import { google } from "@ai-sdk/google";
@@ -96,38 +97,46 @@ O plano DEVE ter exatamente 7 dias (MONDAY a SUNDAY). Use:
 - \`isRest: false\`, \`exercises: [...]\`, \`estimatedDurationInSeconds: [valor estimado]\` para dias de treino`;
 
 export const aiRoutes = async (app: FastifyInstance) => {
-  app.post("/ai", {}, async (request, reply) => {
-    const session = await auth.api.getSession({
-      headers: fromNodeHeaders(request.headers),
-    });
+  app.withTypeProvider<ZodTypeProvider>().route({
+    method: "POST",
+    url: "/",
+    schema: {
+      tags: ["AI"],
+      summary: "Chat with AI personal trainer",
+    },
+    handler: async (request, reply) => {
+      const session = await auth.api.getSession({
+        headers: fromNodeHeaders(request.headers),
+      });
 
-    if (!session) {
-      return reply.status(401).send({ error: "Unauthorized" });
-    }
+      if (!session) {
+        return reply.status(401).send({ error: "Unauthorized" });
+      }
 
-    const userId = session.user.id;
-    const { messages } = request.body as { messages: UIMessage[] };
+      const userId = session.user.id;
+      const { messages } = request.body as { messages: UIMessage[] };
 
-    const result = streamText({
-      model: google("gemini-3-flash-preview"),
-      system: SYSTEM_PROMPT,
-      tools: {
-        getUserTrainData: getUserTrainData(userId),
-        updateUserTrainData: updateUserTrainData(userId),
-        getWorkoutPlans: getWorkoutPlans(userId),
-        createWorkoutPlan: createWorkoutPlan(userId),
-      },
-      stopWhen: stepCountIs(5),
-      messages: await convertToModelMessages(messages),
-    });
+      const result = streamText({
+        model: google("gemini-3-flash-preview"),
+        system: SYSTEM_PROMPT,
+        tools: {
+          getUserTrainData: getUserTrainData(userId),
+          updateUserTrainData: updateUserTrainData(userId),
+          getWorkoutPlans: getWorkoutPlans(userId),
+          createWorkoutPlan: createWorkoutPlan(userId),
+        },
+        stopWhen: stepCountIs(5),
+        messages: await convertToModelMessages(messages),
+      });
 
-    const response = result.toUIMessageStreamResponse();
-    reply.status(response.status);
+      const response = result.toUIMessageStreamResponse();
+      reply.status(response.status);
 
-    response.headers.forEach((value, key) => {
-      reply.header(key, value);
-    });
+      response.headers.forEach((value, key) => {
+        reply.header(key, value);
+      });
 
-    return response.body;
+      return response.body;
+    },
   });
 };
